@@ -21,7 +21,7 @@ export const MobileNav: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { user, profile, logout } = useAuth();
-  const { tasks } = useData();
+  const { tasks, currentUser } = useData();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -32,8 +32,8 @@ export const MobileNav: React.FC = () => {
 
   const openTaskCount = tasks.filter((t) => t.status !== 'COMPLETED').length;
 
-  const displayName = profile?.name || user?.displayName || 'GRIET Member';
-  const displayEmail = profile?.email || user?.email || '';
+  const displayName = currentUser?.name || profile?.name || user?.displayName || 'GRIET Member';
+  const displayEmail = currentUser?.email || profile?.email || user?.email || '';
 
   return (
     <>

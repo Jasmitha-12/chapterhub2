@@ -28,7 +28,9 @@ interface DataContextType {
   createEvent: (eventData: Omit<CalendarEvent, 'id' | 'createdAt'>) => Promise<{ success: boolean; id?: string; message?: string }>;
   updateEvent: (eventId: string, updates: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>) => Promise<{ success: boolean; message?: string }>;
   deleteEvent: (eventId: string) => Promise<{ success: boolean; message?: string }>;
-  addMember: (memberData: { name: string; email: string; domainId: DomainId; role?: string }) => Member;
+  updateMemberRole: (memberId: string, newRole: 'ADMIN' | 'MEMBER') => Promise<{ success: boolean; message?: string }>;
+  updateMemberDomain: (memberId: string, domainId: DomainId) => Promise<{ success: boolean; message?: string }>;
+  deleteMember: (memberId: string) => Promise<{ success: boolean; message?: string }>;
   canEditTaskStatus: (task: Task) => boolean;
   canEditTaskDetails: (task: Task) => boolean;
   canDeleteTask: (task: Task) => boolean;
@@ -45,19 +47,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tasksLoading, setTasksLoading] = useState(true);
   const [eventsLoading, setEventsLoading] = useState(true);
 
+  // Derive real-time role directly from Firestore member snapshot with fallback to initial profile
   const currentMember = members.find((m) => m.id === user?.uid);
-  const isAdmin =
-    profile?.role?.toUpperCase() === 'ADMIN' ||
-    currentMember?.role?.toUpperCase() === 'ADMIN';
+  const activeRole = (currentMember?.role || profile?.role || 'MEMBER').toUpperCase();
+  const isAdmin = activeRole === 'ADMIN';
 
-  // Construct current member object from real Firebase user
+  // Construct current member object from real Firebase user and Firestore profile
   const currentUser: Member | null = user
     ? {
         id: user.uid,
         name: profile?.name || user.displayName || 'GRIET Member',
         email: user.email || '',
         domainId: currentMember?.domainId || 'tech_team',
-        role: isAdmin ? 'ADMIN' : (profile?.role || currentMember?.role || 'MEMBER'),
+        role: activeRole,
         avatarColor: '#4285F4',
         photoURL: profile?.photoURL || user.photoURL,
         joinedAt: currentMember?.joinedAt || new Date().toISOString(),
@@ -468,28 +470,69 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Local helper for prototype member invitation
-  const addMember = (memberData: {
-    name: string;
-    email: string;
-    domainId: DomainId;
-    role?: string;
-  }): Member => {
-    const googleColors = ['#4285F4', '#EA4335', '#FBBC05', '#34A853'];
-    const randomColor = googleColors[members.length % googleColors.length];
+  // =========================================================================
+  // 6. Member Management Operations (Admin Only)
+  // =========================================================================
+  const updateMemberRole = async (
+    memberId: string,
+    newRole: 'ADMIN' | 'MEMBER'
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can change member roles.' };
 
-    const newMember: Member = {
-      id: 'member-' + Date.now(),
-      name: memberData.name.trim(),
-      email: memberData.email.trim().toLowerCase(),
-      domainId: memberData.domainId,
-      role: memberData.role?.trim() || 'Domain Member',
-      avatarColor: randomColor,
-      joinedAt: new Date().toISOString(),
-    };
+    try {
+      const userRef = doc(db, 'chapterhub_users', memberId);
+      await updateDoc(userRef, {
+        role: newRole,
+        updatedAt: serverTimestamp(),
+      });
+      console.log(`[ChapterHub] Member ${memberId} role updated to ${newRole}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to update member role:', err);
+      return { success: false, message: err.message || 'Failed to update member role in Firestore.' };
+    }
+  };
 
-    setMembers((prev) => [...prev, newMember]);
-    return newMember;
+  const updateMemberDomain = async (
+    memberId: string,
+    domainId: DomainId
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can change member domains.' };
+
+    try {
+      const userRef = doc(db, 'chapterhub_users', memberId);
+      await updateDoc(userRef, {
+        domainId,
+        updatedAt: serverTimestamp(),
+      });
+      console.log(`[ChapterHub] Member ${memberId} domain updated to ${domainId}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to update member domain:', err);
+      return { success: false, message: err.message || 'Failed to update member domain in Firestore.' };
+    }
+  };
+
+  const deleteMember = async (
+    memberId: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can remove members.' };
+    if (memberId === user.uid) {
+      return { success: false, message: 'You cannot remove your own admin profile.' };
+    }
+
+    try {
+      const userRef = doc(db, 'chapterhub_users', memberId);
+      await deleteDoc(userRef);
+      console.log(`[ChapterHub] Member ${memberId} deleted from chapterhub_users.`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to delete member from Firestore:', err);
+      return { success: false, message: err.message || 'Failed to delete member from Firestore.' };
+    }
   };
 
   return (
@@ -509,7 +552,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createEvent,
         updateEvent,
         deleteEvent,
-        addMember,
+        updateMemberRole,
+        updateMemberDomain,
+        deleteMember,
         canEditTaskStatus,
         canEditTaskDetails,
         canDeleteTask,

@@ -20,7 +20,7 @@ interface LayoutContext {
 
 export const TasksPage: React.FC = () => {
   const { openCreateTask } = useOutletContext<LayoutContext>();
-  const { tasks } = useData();
+  const { tasks, isAdmin } = useData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -64,14 +64,16 @@ export const TasksPage: React.FC = () => {
         </div>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={openCreateTask}
-          >
-            <Plus size={16} />
-            <span>Create Task</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreateTask}
+            >
+              <Plus size={16} />
+              <span>Create Task</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -172,9 +174,13 @@ export const TasksPage: React.FC = () => {
             <EmptyState
               icon={ListTodo}
               title="No work on the board yet."
-              description="Create the first task for the chapter."
-              actionLabel="+ Create Task"
-              onAction={openCreateTask}
+              description={
+                isAdmin
+                  ? 'Create the first task for the chapter.'
+                  : 'Tasks will appear here once scheduled by chapter admins.'
+              }
+              actionLabel={isAdmin ? '+ Create Task' : undefined}
+              onAction={isAdmin ? openCreateTask : undefined}
               accentColor="#4285F4"
             />
           </div>

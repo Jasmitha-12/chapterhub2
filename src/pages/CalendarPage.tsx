@@ -207,23 +207,25 @@ export const CalendarPage: React.FC = () => {
 
         <div className="header-actions">
           {isAdmin && (
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => handleOpenCreateEvent()}
-            >
-              <CalendarPlus size={16} />
-              <span>Schedule Event</span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => handleOpenCreateEvent()}
+              >
+                <CalendarPlus size={16} />
+                <span>Schedule Event</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={openCreateTask}
+              >
+                <Plus size={16} />
+                <span>Schedule Task</span>
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={openCreateTask}
-          >
-            <Plus size={16} />
-            <span>Schedule Task</span>
-          </button>
         </div>
       </header>
 

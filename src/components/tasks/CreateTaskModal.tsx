@@ -194,7 +194,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 }}
               >
                 <UserPlus size={13} />
-                <span>+ Add Member First</span>
+                <span>+ Invite Members First</span>
               </button>
             )}
           </div>

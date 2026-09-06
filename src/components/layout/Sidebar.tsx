@@ -23,7 +23,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, profile, logout } = useAuth();
-  const { tasks } = useData();
+  const { tasks, currentUser } = useData();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -34,9 +34,9 @@ export const Sidebar: React.FC<SidebarProps> = () => {
   // Real count of open tasks
   const openTaskCount = tasks.filter((t) => t.status !== 'COMPLETED').length;
 
-  const displayName = profile?.name || user?.displayName || 'GRIET Member';
-  const displayRole = profile?.role || 'MEMBER';
-  const photoURL = profile?.photoURL || user?.photoURL;
+  const displayName = currentUser?.name || profile?.name || user?.displayName || 'GRIET Member';
+  const displayRole = currentUser?.role || profile?.role || 'MEMBER';
+  const photoURL = currentUser?.photoURL || profile?.photoURL || user?.photoURL;
 
   return (
     <aside className="sidebar-container">

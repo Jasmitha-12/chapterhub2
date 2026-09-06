@@ -2042,20 +2042,34 @@ a {
   border-radius: var(--radius-full);
 }
 
-.switch-user-chip {
+.role-badge-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: rgba(234, 67, 53, 0.12);
+  color: var(--google-red);
+  border: 1px solid rgba(234, 67, 53, 0.25);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  transition: all var(--transition-fast);
 }
 
-.switch-user-chip:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.role-badge-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
 }
 
 .member-main-info {
@@ -2083,6 +2097,12 @@ a {
   color: var(--text-muted);
 }
 
+.member-domain-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .domain-pill {
   display: inline-block;
   font-size: 0.76rem;
@@ -2093,12 +2113,35 @@ a {
   background: var(--bg-subtle);
 }
 
+.member-domain-select {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 170px;
+}
+
+.member-domain-select:focus {
+  outline: none;
+  border-color: var(--google-blue);
+}
+
 .member-card-footer {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
+}
+
+.member-stats-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .member-stat-item {
@@ -2109,6 +2152,67 @@ a {
 .stat-val {
   font-size: 1.15rem;
   font-weight: 700;
+}
+
+/* Admin member management buttons */
+.member-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-role-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-role-promote {
+  background: rgba(234, 67, 53, 0.08);
+  border: 1px solid rgba(234, 67, 53, 0.25);
+  color: var(--google-red);
+}
+
+.btn-role-promote:hover {
+  background: rgba(234, 67, 53, 0.16);
+  border-color: var(--google-red);
+}
+
+.btn-role-demote {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.btn-role-demote:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-member-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-member-delete:hover {
+  background: rgba(234, 67, 53, 0.1);
+  border-color: rgba(234, 67, 53, 0.25);
+  color: var(--google-red);
 }
 
 /* ==========================================================================

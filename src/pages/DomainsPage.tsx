@@ -28,7 +28,7 @@ interface LayoutContext {
 
 export const DomainsPage: React.FC = () => {
   const { openCreateTask, openAddMember } = useOutletContext<LayoutContext>();
-  const { tasks, members } = useData();
+  const { tasks, members, isAdmin } = useData();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const domainParamId = searchParams.get('id');
@@ -127,16 +127,18 @@ export const DomainsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="domain-hero-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={openCreateTask}
-            >
-              <Plus size={16} />
-              <span>Add Task for {selectedDomain.name}</span>
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="domain-hero-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={openCreateTask}
+              >
+                <Plus size={16} />
+                <span>Add Task for {selectedDomain.name}</span>
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Stats Row for Domain */}
@@ -168,9 +170,13 @@ export const DomainsPage: React.FC = () => {
               <EmptyState
                 icon={Layers}
                 title="Nothing here yet."
-                description={`No tasks have been scheduled for ${selectedDomain.name} yet.`}
-                actionLabel={`+ Create ${selectedDomain.name} Task`}
-                onAction={openCreateTask}
+                description={
+                  isAdmin
+                    ? `No tasks have been scheduled for ${selectedDomain.name} yet.`
+                    : `No tasks scheduled for ${selectedDomain.name}.`
+                }
+                actionLabel={isAdmin ? `+ Create ${selectedDomain.name} Task` : undefined}
+                onAction={isAdmin ? openCreateTask : undefined}
                 accentColor={selectedDomain.color}
               />
             </div>
@@ -200,13 +206,15 @@ export const DomainsPage: React.FC = () => {
             <h2 className="section-title">
               Team Members ({domainMembers.length})
             </h2>
-            <button
-              type="button"
-              className="text-link-btn"
-              onClick={openAddMember}
-            >
-              + Add Member to {selectedDomain.name}
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="text-link-btn"
+                onClick={openAddMember}
+              >
+                + Add Member to {selectedDomain.name}
+              </button>
+            )}
           </div>
 
           {domainMembers.length === 0 ? (

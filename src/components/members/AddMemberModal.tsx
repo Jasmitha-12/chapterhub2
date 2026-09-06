@@ -1,145 +1,116 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
-import { useData } from '../../context/DataContext';
-import { DOMAINS } from '../../data/domains';
-import type { DomainId } from '../../types';
+import { Copy, Check, Shield, Sparkles } from 'lucide-react';
 
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultDomainId?: DomainId;
+  defaultDomainId?: string;
 }
 
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   isOpen,
   onClose,
-  defaultDomainId = 'tech_team',
 }) => {
-  const { addMember } = useData();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [domainId, setDomainId] = useState<DomainId>(defaultDomainId);
-  const [role, setRole] = useState('Core Team Member');
-  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Please enter the member name');
-      return;
-    }
-    if (!email.trim()) {
-      setError('Please enter an email address');
-      return;
-    }
+  const inviteUrl = `${window.location.origin}/login`;
 
-    addMember({
-      name: name.trim(),
-      email: email.trim(),
-      domainId,
-      role: role.trim(),
-    });
-
-    // Reset
-    setName('');
-    setEmail('');
-    setRole('Core Team Member');
-    setError('');
-    onClose();
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add Chapter Member"
-      subtitle="Register a member into the chapter workspace"
+      title="Invite Chapter Member"
+      subtitle="Onboard active contributors and domain leads into ChapterHub"
+      maxWidth="540px"
     >
-      <form onSubmit={handleSubmit} className="form-stack">
-        {error && <div className="form-error-banner">{error}</div>}
-
-        <div className="form-group">
-          <label htmlFor="member-name" className="form-label">
-            Full Name <span className="required-star">*</span>
-          </label>
-          <input
-            id="member-name"
-            type="text"
-            className="form-input"
-            placeholder="e.g. Aadhya Reddy"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setError('');
-            }}
-            autoFocus
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="member-email" className="form-label">
-            College / Club Email <span className="required-star">*</span>
-          </label>
-          <input
-            id="member-email"
-            type="email"
-            className="form-input"
-            placeholder="e.g. aadhya@grietcollege.com"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setError('');
-            }}
-          />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group" style={{ flex: 1 }}>
-            <label htmlFor="member-domain" className="form-label">
-              Domain
-            </label>
-            <select
-              id="member-domain"
-              className="form-select"
-              value={domainId}
-              onChange={(e) => setDomainId(e.target.value as DomainId)}
-            >
-              {DOMAINS.map((domain) => (
-                <option key={domain.id} value={domain.id}>
-                  {domain.name}
-                </option>
-              ))}
-            </select>
+      <div className="invite-modal-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div
+          style={{
+            padding: '14px 16px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(66, 133, 244, 0.08)',
+            border: '1px solid rgba(66, 133, 244, 0.2)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+          }}
+        >
+          <Sparkles size={20} style={{ color: 'var(--google-blue)', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
+              Automatic Google Account Onboarding
+            </strong>
+            Members join ChapterHub simply by signing in with their Google account. Their profile is instantly created in the directory with the default <strong>MEMBER</strong> role.
           </div>
+        </div>
 
-          <div className="form-group" style={{ flex: 1 }}>
-            <label htmlFor="member-role" className="form-label">
-              Role
-            </label>
+        <div className="form-group">
+          <label className="form-label" style={{ fontWeight: 600 }}>
+            ChapterHub Sign-in Link
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <input
-              id="member-role"
               type="text"
+              readOnly
+              value={inviteUrl}
               className="form-input"
-              placeholder="e.g. Domain Lead, Core Member"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                background: 'var(--bg-subtle)',
+                color: 'var(--text-secondary)',
+              }}
             />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleCopy}
+              style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {copied ? <Check size={15} style={{ color: 'var(--google-green)' }} /> : <Copy size={15} />}
+              <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+            </button>
           </div>
         </div>
 
-        <div className="modal-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary">
-            Add to Chapter
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            padding: '14px 16px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            fontSize: '0.82rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <Shield size={15} style={{ color: 'var(--google-yellow)' }} />
+            <span>Admin Management</span>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <li>Once signed in, members appear immediately in the real-time Members directory.</li>
+            <li>Admins can assign members to specific domain tracks (Tech Team, Creative, Logistics, etc.).</li>
+            <li>Admins can promote trusted leads to <strong>ADMIN</strong> directly from their member card.</li>
+          </ul>
+        </div>
+
+        <div className="modal-actions" style={{ marginTop: '8px' }}>
+          <button type="button" className="btn btn-primary" onClick={onClose}>
+            Done
           </button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 };
+

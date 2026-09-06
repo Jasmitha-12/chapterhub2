@@ -17,7 +17,7 @@ interface LayoutContext {
 
 export const DashboardPage: React.FC = () => {
   const { openCreateTask, openAddMember } = useOutletContext<LayoutContext>();
-  const { tasks, currentUser } = useData();
+  const { tasks, currentUser, isAdmin } = useData();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
@@ -59,14 +59,16 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={openCreateTask}
-          >
-            <Plus size={16} />
-            <span>New Task</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreateTask}
+            >
+              <Plus size={16} />
+              <span>New Task</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -163,9 +165,13 @@ export const DashboardPage: React.FC = () => {
               <EmptyState
                 icon={ListTodo}
                 title="No tasks yet."
-                description="Create a task and get the chapter moving."
-                actionLabel="+ New Task"
-                onAction={openCreateTask}
+                description={
+                  isAdmin
+                    ? 'Create a task and get the chapter moving.'
+                    : 'Tasks will appear here once assigned or scheduled.'
+                }
+                actionLabel={isAdmin ? '+ New Task' : undefined}
+                onAction={isAdmin ? openCreateTask : undefined}
                 accentColor="#4285F4"
               />
             </div>
@@ -230,15 +236,17 @@ export const DashboardPage: React.FC = () => {
               })}
             </div>
 
-            <div className="quick-action-strip">
-              <button
-                type="button"
-                className="btn btn-outline btn-full-width"
-                onClick={openAddMember}
-              >
-                <span>+ Invite Member</span>
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="quick-action-strip">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-full-width"
+                  onClick={openAddMember}
+                >
+                  <span>+ Invite Member</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
