@@ -26,7 +26,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleReset = () => {
     this.setState({ hasError: false, error: null });
-    window.location.href = '/dashboard';
+    // Use hash navigation so it works correctly under HashRouter on any base path
+    window.location.hash = '#/login';
   };
 
   public render() {

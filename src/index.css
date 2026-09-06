@@ -3005,7 +3005,11 @@ html.dark .bubble-fore-soft2,
   width: 100%;
   max-width: 480px;
   transform-style: preserve-3d;
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: max-width 750ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-center-hub--login {
+  max-width: 490px;
 }
 
 .hub-ambient-glow {
@@ -3021,6 +3025,19 @@ html.dark .bubble-fore-soft2,
   filter: blur(32px);
   pointer-events: none;
   z-index: -1;
+  transition: all 750ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hub-ambient-glow--login {
+  inset: -28px;
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(66, 133, 244, 0.26) 0%,
+    rgba(52, 168, 83, 0.14) 40%,
+    rgba(251, 188, 5, 0.1) 65%,
+    transparent 75%
+  );
+  filter: blur(36px);
 }
 
 .hub-card {
@@ -3033,9 +3050,84 @@ html.dark .bubble-fore-soft2,
   box-shadow: var(--shadow-lg), 0 20px 48px rgba(0, 0, 0, 0.07);
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
   text-align: center;
-  animation: modalPop 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  transition: all 750ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Landing state: Interactive Invitation */
+.hub-card--landing {
+  cursor: pointer;
+  user-select: none;
+}
+
+.hub-card--landing:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: rgba(66, 133, 244, 0.35);
+  box-shadow: var(--shadow-lg), 0 24px 56px rgba(66, 133, 244, 0.14);
+}
+
+.hub-card--landing:focus-visible {
+  outline: 2px solid var(--google-blue);
+  outline-offset: 4px;
+}
+
+/* Login state: Active form morph */
+.hub-card--login-active {
+  cursor: default;
+  border-color: rgba(66, 133, 244, 0.28);
+  box-shadow: var(--shadow-xl), 0 28px 64px rgba(66, 133, 244, 0.18);
+  padding: 32px 38px 38px;
+}
+
+/* Top Back Bar inside expanded login card */
+.hub-login-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: -6px;
+  animation: hubFadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hub-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 5px 12px 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hub-back-btn:hover {
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+  transform: translateX(-2px);
+}
+
+.hub-back-btn:focus-visible {
+  outline: 2px solid var(--google-blue);
+  outline-offset: 2px;
+}
+
+.hub-login-mode-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--google-blue);
+  background: rgba(66, 133, 244, 0.08);
+  border: 1px solid rgba(66, 133, 244, 0.2);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
 }
 
 /* Brand & GRIET Logo */
@@ -3117,6 +3209,106 @@ html.dark .bubble-fore-soft2,
   font-weight: 500;
   color: var(--text-secondary);
   line-height: 1.45;
+  transition: color var(--transition-fast);
+}
+
+/* Landing state: Action invitation prompt */
+.hub-landing-action-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 2px;
+  animation: hubFadeIn 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hub-enter-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 22px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  transition: all var(--transition-fast);
+}
+
+.hub-card--landing:hover .hub-enter-action-pill {
+  background: var(--google-blue);
+  color: #FFFFFF;
+  border-color: var(--google-blue);
+  box-shadow: 0 6px 22px rgba(66, 133, 244, 0.35);
+  transform: scale(1.03);
+}
+
+.enter-action-arrow-bubble {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--google-blue);
+  transition: all var(--transition-fast);
+}
+
+.hub-card--landing:hover .enter-action-arrow-bubble {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  transform: translateX(2px);
+}
+
+.hub-action-subprompt {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hub-kbd {
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+/* Login state: Reveal container */
+.hub-login-reveal-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: hubRevealUp 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes hubRevealUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hubFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Error Banner */
@@ -3221,12 +3413,24 @@ html.dark .bubble-fore-soft2,
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+  transition: opacity 750ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 750ms cubic-bezier(0.16, 1, 0.3, 1),
+              filter 750ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow var(--transition-normal),
+              border-color var(--transition-normal);
 }
 
 .satellite-card:hover {
   border-color: var(--border-medium);
   box-shadow: var(--shadow-lg), 0 0 24px rgba(66, 133, 244, 0.12);
+}
+
+/* Retracted state during Login Mode */
+.satellite-card--retracted {
+  opacity: 0 !important;
+  transform: scale(0.78) translateZ(-50px) !important;
+  filter: blur(8px);
+  pointer-events: none !important;
 }
 
 .satellite-header {
@@ -3604,10 +3808,18 @@ html.dark .chip-creative, [data-theme='dark'] .chip-creative { color: var(--goog
   .landing-status-dot,
   .landing-particle,
   .landing-ambient-light,
-  .landing-center-hub {
+  .landing-center-hub,
+  .hub-card,
+  .hub-login-reveal-container,
+  .hub-login-top-bar,
+  .hub-landing-action-prompt {
     animation: none !important;
     transform: none !important;
     transition: none !important;
+  }
+
+  .satellite-card--retracted {
+    display: none !important;
   }
 
   .landing-3d-viewport {

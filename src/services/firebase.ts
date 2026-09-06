@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -24,12 +24,28 @@ if (!isFirebaseConfigured) {
   );
 }
 
-// Initialize Firebase modular app singleton
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Guard module-scope initialization: if env vars are missing (e.g. GitHub Actions without Secrets),
+// do NOT crash the whole bundle. Export null stubs so the app renders and shows a proper error.
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let googleProvider: GoogleAuthProvider;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+try {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: 'select_account' });
+} catch (err) {
+  console.error('[ChapterHub] Firebase initialization failed:', err);
+  // Cast to satisfy TypeScript - AuthContext checks isFirebaseConfigured before using these
+  app = {} as FirebaseApp;
+  auth = {} as Auth;
+  db = {} as Firestore;
+  googleProvider = {} as GoogleAuthProvider;
+}
 
+export { auth, db, googleProvider };
 export default app;
+
