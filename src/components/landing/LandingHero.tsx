@@ -137,6 +137,9 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
           transform: reducedMotion
             ? 'none'
             : `perspective(1200px) rotateX(${tilt.x * (isLoginMode ? 0.4 : 1)}deg) rotateY(${tilt.y * (isLoginMode ? 0.4 : 1)}deg)`,
+          /* Flatten 3D stacking context in login mode to prevent GPU compositing
+             from creating phantom hit-test layers that block child button events */
+          transformStyle: isLoginMode ? 'flat' : undefined,
         }}
       >
         {/* Floating Satellite Card 1: Tasks / Deliverables (Top-Left) */}
@@ -299,8 +302,8 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             role={!isLoginMode ? 'button' : 'region'}
             aria-label={!isLoginMode ? 'Enter ChapterHub workspace sign in' : 'ChapterHub sign in dialog'}
             aria-expanded={isLoginMode}
-            onClick={handleCardClick}
-            onKeyDown={handleCardKeyDown}
+            onClick={!isLoginMode ? handleCardClick : undefined}
+            onKeyDown={!isLoginMode ? handleCardKeyDown : undefined}
             className={`hub-card ${!isLoginMode ? 'hub-card--landing' : 'hub-card--login-active'}`}
           >
             {/* Back Button inside expanded login card */}

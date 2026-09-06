@@ -3080,6 +3080,9 @@ html.dark .bubble-fore-soft2,
   border-color: rgba(66, 133, 244, 0.28);
   box-shadow: var(--shadow-xl), 0 28px 64px rgba(66, 133, 244, 0.18);
   padding: 32px 38px 38px;
+  /* In login mode the card wrapper must NOT intercept pointer events —
+     only child interactive elements (Back btn, Google btn) should be clickable */
+  pointer-events: none;
 }
 
 /* Top Back Bar inside expanded login card */
@@ -3089,6 +3092,7 @@ html.dark .bubble-fore-soft2,
   justify-content: space-between;
   margin-bottom: -6px;
   animation: hubFadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
 }
 
 .hub-back-btn {
@@ -3331,6 +3335,7 @@ html.dark .bubble-fore-soft2,
   width: 100%;
   position: relative;
   z-index: 10;
+  pointer-events: auto;
 }
 
 .hub-google-btn {
@@ -3351,6 +3356,7 @@ html.dark .bubble-fore-soft2,
   cursor: pointer;
   position: relative;
   z-index: 10;
+  pointer-events: auto;
   transition: all var(--transition-fast);
 }
 
