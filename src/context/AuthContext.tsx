@@ -137,7 +137,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       auth,
       async (firebaseUser) => {
         setUser(firebaseUser);
-        setLoading(false);
 
         if (firebaseUser) {
           try {
@@ -148,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setProfile(null);
         }
+        setLoading(false);
       },
       (error) => {
         console.error('[ChapterHub] onAuthStateChanged error:', error);

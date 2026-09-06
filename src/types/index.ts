@@ -37,8 +37,8 @@ export interface Task {
   title: string;
   description: string;
   domainId: DomainId;
-  subTrack?: string;
-  assignedTo?: string; // Member / User UID
+  subTrack?: string | null;
+  assignedTo?: string | null; // Member / User UID
   priority: TaskPriority;
   status: TaskStatus;
   deadline: string; // YYYY-MM-DD
@@ -46,6 +46,22 @@ export interface Task {
   createdAt: string;
   updatedAt?: string;
   completedAt?: string;
+}
+
+export type EventType = 'MEETING' | 'WORKSHOP' | 'HACKATHON' | 'INFO_SESSION' | 'GENERAL';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // YYYY-MM-DD
+  startTime?: string | null;
+  endTime?: string | null;
+  type: EventType;
+  domainId?: DomainId | null;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export type Theme = 'light' | 'dark';

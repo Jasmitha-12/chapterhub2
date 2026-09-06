@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Task, Member, TaskStatus, DomainId } from '../types';
+import type { Task, Member, TaskStatus, DomainId, CalendarEvent, EventType } from '../types';
 import { useAuth } from './AuthContext';
 import { db } from '../services/firebase';
 import {
@@ -16,13 +16,18 @@ import {
 interface DataContextType {
   tasks: Task[];
   members: Member[];
+  events: CalendarEvent[];
   currentUser: Member | null;
   tasksLoading: boolean;
+  eventsLoading: boolean;
   isAdmin: boolean;
   createTask: (taskData: Omit<Task, 'id' | 'createdAt'>) => Promise<string>;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => Promise<{ success: boolean; message?: string }>;
   updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<{ success: boolean; message?: string }>;
   deleteTask: (taskId: string) => Promise<{ success: boolean; message?: string }>;
+  createEvent: (eventData: Omit<CalendarEvent, 'id' | 'createdAt'>) => Promise<{ success: boolean; id?: string; message?: string }>;
+  updateEvent: (eventId: string, updates: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>) => Promise<{ success: boolean; message?: string }>;
+  deleteEvent: (eventId: string) => Promise<{ success: boolean; message?: string }>;
   addMember: (memberData: { name: string; email: string; domainId: DomainId; role?: string }) => Member;
   canEditTaskStatus: (task: Task) => boolean;
   canEditTaskDetails: (task: Task) => boolean;
@@ -36,9 +41,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-  const isAdmin = profile?.role === 'ADMIN';
+  const currentMember = members.find((m) => m.id === user?.uid);
+  const isAdmin =
+    profile?.role?.toUpperCase() === 'ADMIN' ||
+    currentMember?.role?.toUpperCase() === 'ADMIN';
 
   // Construct current member object from real Firebase user
   const currentUser: Member | null = user
@@ -46,11 +56,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: user.uid,
         name: profile?.name || user.displayName || 'GRIET Member',
         email: user.email || '',
-        domainId: 'tech_team',
-        role: profile?.role || 'MEMBER',
+        domainId: currentMember?.domainId || 'tech_team',
+        role: isAdmin ? 'ADMIN' : (profile?.role || currentMember?.role || 'MEMBER'),
         avatarColor: '#4285F4',
         photoURL: profile?.photoURL || user.photoURL,
-        joinedAt: new Date().toISOString(),
+        joinedAt: currentMember?.joinedAt || new Date().toISOString(),
       }
     : null;
 
@@ -172,25 +182,86 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, currentUser?.id]);
 
   // =========================================================================
+  // 3. Real-time Events Listener: chapterhub_events
+  // =========================================================================
+  useEffect(() => {
+    if (!user) {
+      setEvents([]);
+      setEventsLoading(false);
+      return;
+    }
+
+    setEventsLoading(true);
+    const eventsQuery = query(collection(db, 'chapterhub_events'));
+
+    const unsubscribeEvents = onSnapshot(
+      eventsQuery,
+      (snapshot) => {
+        const parseTime = (val: any): string => {
+          if (!val) return '';
+          if (val.toDate) return val.toDate().toISOString();
+          if (typeof val === 'string') return val;
+          return new Date().toISOString();
+        };
+
+        const fetchedEvents: CalendarEvent[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            title: data.title || 'Untitled Event',
+            description: data.description || '',
+            date: data.date || '',
+            startTime: data.startTime || null,
+            endTime: data.endTime || null,
+            type: (data.type as EventType) || 'GENERAL',
+            domainId: (data.domainId as DomainId) || null,
+            createdBy: data.createdBy,
+            createdAt: parseTime(data.createdAt) || new Date().toISOString(),
+            updatedAt: parseTime(data.updatedAt) || undefined,
+          };
+        });
+
+        // Sort by date ascending, then start time
+        fetchedEvents.sort((a, b) => {
+          const dateDiff = a.date.localeCompare(b.date);
+          if (dateDiff !== 0) return dateDiff;
+          return (a.startTime || '').localeCompare(b.startTime || '');
+        });
+
+        console.log(`[ChapterHub] Synchronized ${fetchedEvents.length} events from Firestore in real-time.`);
+        setEvents(fetchedEvents);
+        setEventsLoading(false);
+      },
+      (err) => {
+        console.error('[ChapterHub] Firestore chapterhub_events listener error:', err);
+        setEventsLoading(false);
+      }
+    );
+
+    return () => unsubscribeEvents();
+  }, [user]);
+
+  // =========================================================================
   // 3. Permission Evaluation
   // =========================================================================
+  // MEMBER can update status only on tasks explicitly assigned to their UID.
+  // Unassigned tasks are status-locked for non-admins (Firestore rules enforce the same).
   const canEditTaskStatus = (task: Task): boolean => {
     if (!user) return false;
     if (isAdmin) return true;
-    if (!task.assignedTo) return true; // Unassigned tasks can be picked up
-    return task.assignedTo === user.uid;
+    return !!task.assignedTo && task.assignedTo === user.uid;
   };
 
-  const canEditTaskDetails = (task: Task): boolean => {
+  // Only ADMIN can edit task details (matches Firestore rules: only isAdmin() for full update).
+  const canEditTaskDetails = (_task: Task): boolean => {
     if (!user) return false;
-    if (isAdmin) return true;
-    return task.createdBy === user.uid;
+    return isAdmin;
   };
 
-  const canDeleteTask = (task: Task): boolean => {
+  // Only ADMIN can delete tasks (matches Firestore rules: only isAdmin() for delete).
+  const canDeleteTask = (_task: Task): boolean => {
     if (!user) return false;
-    if (isAdmin) return true;
-    return task.createdBy === user.uid;
+    return isAdmin;
   };
 
   // =========================================================================
@@ -261,21 +332,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!canEditTaskDetails(targetTask)) {
       return {
         success: false,
-        message: 'Only the task creator or an Admin can edit this task.',
+        message: 'Only an Admin can edit task details.',
       };
     }
 
     try {
       const taskRef = doc(db, 'chapterhub_tasks', taskId);
       const cleanUpdates: Record<string, any> = {
-        ...updates,
         updatedAt: serverTimestamp(),
       };
-      if (updates.status === 'COMPLETED') {
-        cleanUpdates.completedAt = serverTimestamp();
-      } else if (updates.status) {
-        cleanUpdates.completedAt = null;
+      if (updates.title !== undefined) cleanUpdates.title = updates.title.trim();
+      if (updates.description !== undefined) cleanUpdates.description = updates.description.trim();
+      if (updates.domainId !== undefined) cleanUpdates.domainId = updates.domainId;
+      if (updates.subTrack !== undefined) cleanUpdates.subTrack = updates.subTrack || null;
+      if (updates.assignedTo !== undefined) cleanUpdates.assignedTo = updates.assignedTo || null;
+      if (updates.priority !== undefined) cleanUpdates.priority = updates.priority;
+      if (updates.status !== undefined) {
+        cleanUpdates.status = updates.status;
+        if (updates.status === 'COMPLETED') {
+          cleanUpdates.completedAt = serverTimestamp();
+        } else {
+          cleanUpdates.completedAt = null;
+        }
       }
+      if (updates.deadline !== undefined) cleanUpdates.deadline = updates.deadline;
+
       await updateDoc(taskRef, cleanUpdates);
       console.log(`[ChapterHub] Successfully updated task ${taskId}`);
       return { success: true };
@@ -292,7 +373,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!canDeleteTask(targetTask)) {
       return {
         success: false,
-        message: 'Only the task creator or an Admin can delete this task.',
+        message: 'Only an Admin can delete tasks.',
       };
     }
 
@@ -304,6 +385,86 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('[ChapterHub] Failed to delete task in Firestore:', err);
       return { success: false, message: err.message || 'Failed to delete task in Firestore.' };
+    }
+  };
+
+  // =========================================================================
+  // 5. Firestore Event Operations (Admin Only)
+  // =========================================================================
+  const createEvent = async (
+    eventData: Omit<CalendarEvent, 'id' | 'createdAt'>
+  ): Promise<{ success: boolean; id?: string; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in to create an event.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can create events.' };
+
+    if (!eventData.title.trim()) return { success: false, message: 'Event title is required.' };
+    if (!eventData.date) return { success: false, message: 'Event date is required.' };
+
+    try {
+      const cleanData = {
+        title: eventData.title.trim(),
+        description: (eventData.description || '').trim(),
+        date: eventData.date,
+        startTime: eventData.startTime || null,
+        endTime: eventData.endTime || null,
+        type: eventData.type || 'GENERAL',
+        domainId: eventData.domainId || null,
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, 'chapterhub_events'), cleanData);
+      console.log(`[ChapterHub] Created event ${docRef.id} in Firestore.`);
+      return { success: true, id: docRef.id };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to create event in Firestore:', err);
+      return { success: false, message: err.message || 'Failed to create event.' };
+    }
+  };
+
+  const updateEvent = async (
+    eventId: string,
+    updates: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in to update an event.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can edit events.' };
+
+    try {
+      const eventRef = doc(db, 'chapterhub_events', eventId);
+      const cleanUpdates: Record<string, any> = {
+        updatedAt: serverTimestamp(),
+      };
+
+      if (updates.title !== undefined) cleanUpdates.title = updates.title.trim();
+      if (updates.description !== undefined) cleanUpdates.description = updates.description.trim();
+      if (updates.date !== undefined) cleanUpdates.date = updates.date;
+      if (updates.startTime !== undefined) cleanUpdates.startTime = updates.startTime || null;
+      if (updates.endTime !== undefined) cleanUpdates.endTime = updates.endTime || null;
+      if (updates.type !== undefined) cleanUpdates.type = updates.type;
+      if (updates.domainId !== undefined) cleanUpdates.domainId = updates.domainId || null;
+
+      await updateDoc(eventRef, cleanUpdates);
+      console.log(`[ChapterHub] Successfully updated event ${eventId}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to update event in Firestore:', err);
+      return { success: false, message: err.message || 'Failed to update event.' };
+    }
+  };
+
+  const deleteEvent = async (eventId: string): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in to delete an event.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can delete events.' };
+
+    try {
+      const eventRef = doc(db, 'chapterhub_events', eventId);
+      await deleteDoc(eventRef);
+      console.log(`[ChapterHub] Successfully deleted event ${eventId}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to delete event in Firestore:', err);
+      return { success: false, message: err.message || 'Failed to delete event.' };
     }
   };
 
@@ -336,13 +497,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         tasks,
         members,
+        events,
         currentUser,
         tasksLoading,
+        eventsLoading,
         isAdmin,
         createTask,
         updateTaskStatus,
         updateTask,
         deleteTask,
+        createEvent,
+        updateEvent,
+        deleteEvent,
         addMember,
         canEditTaskStatus,
         canEditTaskDetails,

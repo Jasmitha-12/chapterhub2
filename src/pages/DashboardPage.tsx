@@ -178,6 +178,7 @@ export const DashboardPage: React.FC = () => {
                 <span className="head-col-priority">PRIORITY</span>
                 <span className="head-col-deadline">DEADLINE</span>
                 <span className="head-col-status">STATUS</span>
+                <span className="head-col-actions" style={{ textAlign: 'right' }}>ACTIONS</span>
               </div>
               <div className="task-table-body">
                 {displayedTasks.map((task) => (

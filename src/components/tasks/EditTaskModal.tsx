@@ -18,16 +18,29 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 }) => {
   const { members, updateTask } = useData();
 
-  const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description);
-  const [domainId, setDomainId] = useState<DomainId>(task.domainId);
+  const [title, setTitle] = useState(task.title || '');
+  const [description, setDescription] = useState(task.description || '');
+  const [domainId, setDomainId] = useState<DomainId>(task.domainId || 'tech_team');
   const [subTrack, setSubTrack] = useState<string>(task.subTrack || '');
   const [assignedTo, setAssignedTo] = useState<string>(task.assignedTo || '');
-  const [priority, setPriority] = useState<TaskPriority>(task.priority);
-  const [status, setStatus] = useState<TaskStatus>(task.status);
-  const [deadline, setDeadline] = useState(task.deadline);
+  const [priority, setPriority] = useState<TaskPriority>(task.priority || 'MEDIUM');
+  const [status, setStatus] = useState<TaskStatus>(task.status || 'NOT_STARTED');
+  const [deadline, setDeadline] = useState(task.deadline || '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Synchronize state whenever a task is loaded or opened
+  React.useEffect(() => {
+    setTitle(task.title || '');
+    setDescription(task.description || '');
+    setDomainId(task.domainId || 'tech_team');
+    setSubTrack(task.subTrack || '');
+    setAssignedTo(task.assignedTo || '');
+    setPriority(task.priority || 'MEDIUM');
+    setStatus(task.status || 'NOT_STARTED');
+    setDeadline(task.deadline || '');
+    setError('');
+  }, [task.id]);
 
   const selectedDomain = getDomainById(domainId);
 
@@ -49,8 +62,8 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         title: title.trim(),
         description: description.trim(),
         domainId,
-        subTrack: selectedDomain?.subTracks && subTrack ? subTrack : undefined,
-        assignedTo: assignedTo || undefined,
+        subTrack: selectedDomain?.subTracks && subTrack ? subTrack : null,
+        assignedTo: assignedTo ? assignedTo : null,
         priority,
         status,
         deadline,
@@ -143,7 +156,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
           {selectedDomain?.subTracks && selectedDomain.subTracks.length > 0 && (
             <div className="form-group" style={{ flex: 1 }}>
               <label htmlFor="edit-task-subtrack" className="form-label">
-                Track
+                {selectedDomain?.name ? `${selectedDomain.name} Sub-team` : 'Sub-team / Track'}
               </label>
               <select
                 id="edit-task-subtrack"

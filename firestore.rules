@@ -1,50 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper to verify authenticated request
+
+    // Helper: Check if request is from an authenticated user
     function isAuth() {
       return request.auth != null;
     }
 
-    // Helper to check if caller is ADMIN
+    // Helper: Check if caller is an ADMIN using chapterhub_users/{uid}.role
     function isAdmin() {
       return isAuth() && 
         exists(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)).data.role == 'ADMIN';
     }
 
+    // Helper: Verify that a user is only modifying their own safe profile fields
+    // A regular member can never alter their own role, createdAt, or other sensitive attributes
+    function isSelfSafeProfileUpdate(uid) {
+      return isAuth() &&
+        request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'photoURL', 'updatedAt']);
+    }
+
+    // Helper: Verify that a member is only updating status, updatedAt, and completedAt on their assigned task.
+    // completedAt is inherently part of status transition (set when marking COMPLETED, cleared otherwise)
+    function isMemberTaskStatusUpdate() {
+      return isAuth() &&
+        resource.data.assignedTo == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt']);
+    }
+
     // ==========================================
     // chapterhub_users: User profiles
     // ==========================================
-    // Any authenticated user can read profiles (needed for task assignment & member directory)
-    // Users can create/update only their own profile
-    // Admins can update any user profile
+    // 1. Any authenticated user can read profiles (needed for Members directory & task assignment)
+    // 2. A user can create only their own document with role: 'MEMBER' (or an ADMIN can create for anyone)
+    // 3. A user can update only their own safe profile fields (name, email, photoURL, updatedAt)
+    // 4. Normal members can NEVER promote themselves to ADMIN
+    // 5. Only an existing ADMIN can update other users, change roles, or delete users
     match /chapterhub_users/{uid} {
       allow read: if isAuth();
-      allow create: if isAuth() && request.auth.uid == uid;
-      allow update: if isAuth() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAuth() && (
+        isAdmin() || 
+        (request.auth.uid == uid && request.resource.data.role == 'MEMBER')
+      );
+      allow update: if isAdmin() || isSelfSafeProfileUpdate(uid);
       allow delete: if isAdmin();
     }
 
     // ==========================================
     // chapterhub_tasks: Tasks & Deliverables
     // ==========================================
-    // All chapter members can see all tasks in real-time
-    // Authenticated members can create tasks
-    // Status updates: assigned member OR Admin can update
-    // Full edits & deletion: Admin OR Task creator can edit/delete
+    // 6. Any authenticated user can read chapter tasks
+    // 7. Only ADMIN can create tasks
+    // 8. Only ADMIN can delete tasks
+    // 9. ADMIN can update any task
+    // 10. A MEMBER can update ONLY the status and updatedAt fields of a task assigned to them
     match /chapterhub_tasks/{taskId} {
       allow read: if isAuth();
-      allow create: if isAuth();
-      allow update: if isAuth() && (
-        isAdmin() ||
-        resource.data.assignedTo == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid
-      );
-      allow delete: if isAuth() && (
-        isAdmin() ||
-        resource.data.createdBy == request.auth.uid
-      );
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isMemberTaskStatusUpdate();
+      allow delete: if isAdmin();
     }
   }
 }

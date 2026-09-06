@@ -241,34 +241,33 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
               </div>
             )}
           </div>
+        </div>
 
-          <div className="task-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {/* Edit button */}
+        {/* Actions Controls (Dedicated Column) */}
+        <div className="task-col-actions">
+          <div className="task-actions-group">
+            {/* Edit button: visible for ADMIN on every task */}
             {canEditDetails && (
               <button
                 type="button"
-                className="task-edit-btn"
+                className="task-action-btn task-edit-btn"
                 onClick={() => setIsEditModalOpen(true)}
                 title="Edit task details"
-                style={{
-                  color: 'var(--text-muted)',
-                  padding: '5px',
-                  borderRadius: 'var(--radius-xs)',
-                  transition: 'color var(--transition-fast)',
-                }}
+                aria-label={`Edit task ${task.title}`}
               >
                 <Edit2 size={14} />
               </button>
             )}
 
-            {/* Delete button */}
+            {/* Delete button: visible for ADMIN on every task */}
             {canDelete && (
               <button
                 type="button"
-                className="task-delete-btn"
+                className="task-action-btn task-delete-btn"
                 onClick={handleDelete}
                 disabled={isDeleting}
                 title="Delete task"
+                aria-label={`Delete task ${task.title}`}
               >
                 {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
