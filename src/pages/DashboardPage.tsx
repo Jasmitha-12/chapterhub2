@@ -50,7 +50,7 @@ export const DashboardPage: React.FC = () => {
         <div className="header-title-block">
           <div className="chapter-kicker">
             <span className="dot dot-blue" />
-            <span>GDG on Campus GRIET Chapter</span>
+            <span>GRIET • GDG on Campus</span>
           </div>
           <h1 className="header-headline">{getGreeting()}</h1>
           <p className="header-subline">

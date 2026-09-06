@@ -111,7 +111,7 @@ export const DomainsPage: React.FC = () => {
 
             <div className="domain-hero-info">
               <div className="domain-hero-kicker">
-                <span>GDGOC GRIET Track</span>
+                <span>GRIET • GDG on Campus</span>
                 {selectedDomain.subTracks && (
                   <div className="subtracks-pill-row">
                     {selectedDomain.subTracks.map((st) => (

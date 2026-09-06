@@ -201,7 +201,7 @@ export const CalendarPage: React.FC = () => {
           </div>
           <h1 className="header-headline">Calendar</h1>
           <p className="header-subline">
-            Monthly schedule of chapter events and task deliverables for GDGOC GRIET.
+            Monthly schedule of chapter events and task deliverables for GDG on Campus GRIET.
           </p>
         </div>
 
