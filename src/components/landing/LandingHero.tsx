@@ -284,9 +284,15 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
         <div
           className={`landing-center-hub ${isLoginMode ? 'landing-center-hub--login' : ''}`}
           style={{
+            /* In login mode: drop Z-axis and flatten 3D context.
+               The preserve-3d + translate3d(z) combo creates a GPU-composited
+               layer that fails pointer hit-testing in production builds. */
             transform: reducedMotion
               ? 'none'
-              : `translate3d(${tilt.y * (isLoginMode ? 0.7 : 1.5)}px, ${tilt.x * (isLoginMode ? 0.7 : 1.5)}px, ${isLoginMode ? '70px' : '60px'})`,
+              : isLoginMode
+                ? `translate(${tilt.y * 0.7}px, ${tilt.x * 0.7}px)` /* 2D only — no Z */
+                : `translate3d(${tilt.y * 1.5}px, ${tilt.x * 1.5}px, 60px)`,
+            transformStyle: isLoginMode ? 'flat' : undefined,
           }}
         >
           {/* Subtle Ambient Glow Behind Main Card */}
