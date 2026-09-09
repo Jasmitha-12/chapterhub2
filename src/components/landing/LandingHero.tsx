@@ -232,7 +232,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             </div>
             <div className="satellite-title-group">
               <span className="satellite-title">Specialized Domains</span>
-              <span className="satellite-pill">8 Core Tracks</span>
+              <span className="satellite-pill">9 Domains</span>
             </div>
           </div>
           <div className="satellite-body-domains">

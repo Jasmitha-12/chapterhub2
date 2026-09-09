@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { DOMAINS } from '../data/domains';
 import { useData } from '../context/DataContext';
-import type { Domain } from '../types';
+import type { Domain, DomainId } from '../types';
 import { TaskItem } from '../components/tasks/TaskItem';
 import { EmptyState } from '../components/common/EmptyState';
 import {
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 interface LayoutContext {
-  openCreateTask: () => void;
+  openCreateTask: (domainId?: DomainId) => void;
   openAddMember: () => void;
 }
 
@@ -71,6 +71,8 @@ export const DomainsPage: React.FC = () => {
         return <Boxes size={20} />;
       case 'FileText':
         return <FileText size={20} />;
+      case 'Users':
+        return <Users size={20} />;
       default:
         return <Layers size={20} />;
     }
@@ -132,7 +134,7 @@ export const DomainsPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={openCreateTask}
+                onClick={() => openCreateTask(selectedDomain.id)}
               >
                 <Plus size={16} />
                 <span>Add Task for {selectedDomain.name}</span>
@@ -176,7 +178,7 @@ export const DomainsPage: React.FC = () => {
                     : `No tasks scheduled for ${selectedDomain.name}.`
                 }
                 actionLabel={isAdmin ? `+ Create ${selectedDomain.name} Task` : undefined}
-                onAction={isAdmin ? openCreateTask : undefined}
+                onAction={isAdmin ? () => openCreateTask(selectedDomain.id) : undefined}
                 accentColor={selectedDomain.color}
               />
             </div>
@@ -258,7 +260,7 @@ export const DomainsPage: React.FC = () => {
           </div>
           <h1 className="header-headline">Domains</h1>
           <p className="header-subline">
-            The 8 operational wings driving GDG on Campus GRIET.
+            The {DOMAINS.length} operational wings driving GDG on Campus GRIET.
           </p>
         </div>
 
@@ -266,7 +268,7 @@ export const DomainsPage: React.FC = () => {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={openCreateTask}
+            onClick={() => openCreateTask()}
           >
             <Plus size={16} />
             <span>New Task</span>

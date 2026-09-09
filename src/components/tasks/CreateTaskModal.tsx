@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { useData } from '../../context/DataContext';
 import { DOMAINS, getDomainById } from '../../data/domains';
@@ -23,7 +23,10 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [domainId, setDomainId] = useState<DomainId>(defaultDomainId);
-  const [subTrack, setSubTrack] = useState<string>('');
+  const [subTrack, setSubTrack] = useState<string>(() => {
+    const d = getDomainById(defaultDomainId);
+    return d?.subTracks && d.subTracks.length > 0 ? d.subTracks[0] : '';
+  });
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [status, setStatus] = useState<TaskStatus>('NOT_STARTED');
@@ -32,6 +35,20 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
   );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const initialDomain = defaultDomainId || 'tech_team';
+      setDomainId(initialDomain);
+      const d = getDomainById(initialDomain);
+      if (d?.subTracks && d.subTracks.length > 0) {
+        setSubTrack(d.subTracks[0]);
+      } else {
+        setSubTrack('');
+      }
+      setError('');
+    }
+  }, [isOpen, defaultDomainId]);
 
   const selectedDomain = getDomainById(domainId);
 
@@ -159,7 +176,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
           {selectedDomain?.subTracks && selectedDomain.subTracks.length > 0 && (
             <div className="form-group" style={{ flex: 1 }}>
               <label htmlFor="task-subtrack" className="form-label">
-                Track
+                {selectedDomain ? `${selectedDomain.name} Sub-team` : 'Sub-team'}
               </label>
               <select
                 id="task-subtrack"

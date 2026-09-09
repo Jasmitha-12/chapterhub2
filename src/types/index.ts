@@ -10,7 +10,8 @@ export type DomainId =
   | 'social_media'
   | 'event_management'
   | 'tech_team'
-  | 'creative';
+  | 'creative'
+  | 'core_team';
 
 export interface Domain {
   id: DomainId;

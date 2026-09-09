@@ -21,7 +21,16 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const [title, setTitle] = useState(task.title || '');
   const [description, setDescription] = useState(task.description || '');
   const [domainId, setDomainId] = useState<DomainId>(task.domainId || 'tech_team');
-  const [subTrack, setSubTrack] = useState<string>(task.subTrack || '');
+  const [subTrack, setSubTrack] = useState<string>(() => {
+    const d = getDomainById(task.domainId || 'tech_team');
+    if (d?.subTracks && d.subTracks.length > 0) {
+      if (task.subTrack && d.subTracks.includes(task.subTrack)) {
+        return task.subTrack;
+      }
+      return d.subTracks[0];
+    }
+    return '';
+  });
   const [assignedTo, setAssignedTo] = useState<string>(task.assignedTo || '');
   const [priority, setPriority] = useState<TaskPriority>(task.priority || 'MEDIUM');
   const [status, setStatus] = useState<TaskStatus>(task.status || 'NOT_STARTED');
@@ -33,14 +42,24 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   React.useEffect(() => {
     setTitle(task.title || '');
     setDescription(task.description || '');
-    setDomainId(task.domainId || 'tech_team');
-    setSubTrack(task.subTrack || '');
+    const targetDomain = task.domainId || 'tech_team';
+    setDomainId(targetDomain);
+    const d = getDomainById(targetDomain);
+    if (d?.subTracks && d.subTracks.length > 0) {
+      if (task.subTrack && d.subTracks.includes(task.subTrack)) {
+        setSubTrack(task.subTrack);
+      } else {
+        setSubTrack(d.subTracks[0]);
+      }
+    } else {
+      setSubTrack('');
+    }
     setAssignedTo(task.assignedTo || '');
     setPriority(task.priority || 'MEDIUM');
     setStatus(task.status || 'NOT_STARTED');
     setDeadline(task.deadline || '');
     setError('');
-  }, [task.id]);
+  }, [task.id, task.domainId, task.subTrack]);
 
   const selectedDomain = getDomainById(domainId);
 
@@ -156,7 +175,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
           {selectedDomain?.subTracks && selectedDomain.subTracks.length > 0 && (
             <div className="form-group" style={{ flex: 1 }}>
               <label htmlFor="edit-task-subtrack" className="form-label">
-                {selectedDomain?.name ? `${selectedDomain.name} Sub-team` : 'Sub-team / Track'}
+                {selectedDomain?.name ? `${selectedDomain.name} Sub-team` : 'Sub-team'}
               </label>
               <select
                 id="edit-task-subtrack"

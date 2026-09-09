@@ -6,6 +6,7 @@ import { AtmosphericCanvas } from '../background/AtmosphericCanvas';
 import { useAuth } from '../../context/AuthContext';
 import { CreateTaskModal } from '../tasks/CreateTaskModal';
 import { AddMemberModal } from '../members/AddMemberModal';
+import type { DomainId } from '../../types';
 import { Loader2 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
@@ -13,6 +14,7 @@ export const AppLayout: React.FC = () => {
   const location = useLocation();
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskModalDomainId, setTaskModalDomainId] = useState<DomainId | undefined>();
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
 
   // While auth state is initializing, never show a blank screen
@@ -67,7 +69,10 @@ export const AppLayout: React.FC = () => {
           <div className="content-container">
             <Outlet
               context={{
-                openCreateTask: () => setIsTaskModalOpen(true),
+                openCreateTask: (domainId?: DomainId) => {
+                  setTaskModalDomainId(domainId);
+                  setIsTaskModalOpen(true);
+                },
                 openAddMember: () => setIsMemberModalOpen(true),
               }}
             />
@@ -78,7 +83,11 @@ export const AppLayout: React.FC = () => {
       {/* Shared Modals */}
       <CreateTaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        defaultDomainId={taskModalDomainId}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setTaskModalDomainId(undefined);
+        }}
         onOpenAddMember={() => {
           setIsTaskModalOpen(false);
           setIsMemberModalOpen(true);

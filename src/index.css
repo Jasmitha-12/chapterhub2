@@ -731,6 +731,7 @@ html.dark .brand-logo-container,
 .dot-red { background-color: var(--google-red); }
 .dot-yellow { background-color: var(--google-yellow); }
 .dot-green { background-color: var(--google-green); }
+.dot-purple { background-color: #A142F4; }
 
 /* ==========================================================================
    Dashboard Metrics Grid
@@ -3638,6 +3639,8 @@ html.dark .badge-yellow, [data-theme='dark'] .badge-yellow { color: var(--google
 html.dark .chip-creative, [data-theme='dark'] .chip-creative { color: var(--google-yellow); }
 .chip-outreach { border-color: rgba(52, 168, 83, 0.3); color: var(--google-green); }
 .chip-ops { border-color: rgba(234, 67, 53, 0.3); color: var(--google-red); }
+.chip-core { border-color: rgba(161, 66, 244, 0.3); color: #A142F4; }
+html.dark .chip-core, [data-theme='dark'] .chip-core { color: #C58AF9; }
 
 /* Satellite 4: Members (Bottom-Right) */
 .satellite-members {
