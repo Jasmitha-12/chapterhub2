@@ -27,6 +27,8 @@ export interface Member {
   name: string;
   email: string;
   domainId: DomainId;
+  domain?: string;
+  year?: string;
   role: string;
   avatarColor: string;
   photoURL?: string | null;
@@ -38,6 +40,7 @@ export interface Task {
   title: string;
   description: string;
   domainId: DomainId;
+  domain?: string;
   subTrack?: string | null;
   assignedTo?: string | null; // Member / User UID
   priority: TaskPriority;

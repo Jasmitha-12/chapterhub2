@@ -1,9 +1,10 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { BrandMark } from '../common/BrandMark';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { DOMAINS, getDomainSlug } from '../../data/domains';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -13,6 +14,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  ChevronDown,
   User as UserIcon,
 } from 'lucide-react';
 
@@ -23,8 +25,20 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, profile, logout } = useAuth();
-  const { tasks, currentUser } = useData();
+  const { tasks, currentUser, isAdmin } = useData();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [isDomainsOpen, setIsDomainsOpen] = useState(true);
+  const isDomainsActive = location.pathname.startsWith('/domains');
+
+  const memberDomain = DOMAINS.find(
+    (d) =>
+      d.id === currentUser?.domainId ||
+      d.name === currentUser?.domain ||
+      d.id === profile?.domainId ||
+      d.name === profile?.domain
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -72,15 +86,139 @@ export const Sidebar: React.FC<SidebarProps> = () => {
           )}
         </NavLink>
 
-        <NavLink
-          to="/domains"
-          className={({ isActive }) =>
-            `nav-item ${isActive ? 'nav-item-active' : ''}`
-          }
-        >
-          <Layers size={18} className="nav-icon" />
-          <span className="nav-text">Domains</span>
-        </NavLink>
+        {/* Domains Dropdown Navigation */}
+        <div className="nav-dropdown-group">
+          <div
+            className={`nav-item nav-item-parent ${isDomainsActive ? 'nav-item-active' : ''}`}
+            onClick={() => {
+              if (isAdmin) {
+                navigate('/domains');
+              } else if (memberDomain) {
+                navigate(`/domains/${getDomainSlug(memberDomain)}`);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            style={{ cursor: 'pointer', justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Layers size={18} className="nav-icon" />
+              <span className="nav-text">Domains</span>
+            </div>
+            <button
+              type="button"
+              className="nav-dropdown-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDomainsOpen(!isDomainsOpen);
+              }}
+              aria-label="Toggle domains list"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '2px 4px',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: isDomainsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+              />
+            </button>
+          </div>
+
+          {isDomainsOpen && (
+            <div
+              className="nav-sub-list"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                paddingLeft: '12px',
+                marginTop: '4px',
+                marginBottom: '6px',
+                borderLeft: '2px solid var(--border-subtle)',
+                marginLeft: '18px',
+              }}
+            >
+              {isAdmin ? (
+                DOMAINS.map((d) => {
+                  const slug = getDomainSlug(d);
+                  return (
+                    <NavLink
+                      key={d.id}
+                      to={`/domains/${slug}`}
+                      className={({ isActive }) =>
+                        `nav-sub-item ${isActive ? 'nav-sub-item-active' : ''}`
+                      }
+                      style={({ isActive }) => ({
+                        fontSize: '0.8rem',
+                        padding: '5px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        color: isActive ? 'var(--google-blue)' : 'var(--text-secondary)',
+                        fontWeight: isActive ? 600 : 500,
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: isActive ? 'rgba(66, 133, 244, 0.08)' : 'transparent',
+                      })}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: d.color,
+                          display: 'inline-block',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{d.name}</span>
+                    </NavLink>
+                  );
+                })
+              ) : memberDomain ? (
+                <NavLink
+                  to={`/domains/${getDomainSlug(memberDomain)}`}
+                  className={({ isActive }) =>
+                    `nav-sub-item ${isActive ? 'nav-sub-item-active' : ''}`
+                  }
+                  style={({ isActive }) => ({
+                    fontSize: '0.8rem',
+                    padding: '5px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    color: isActive ? 'var(--google-blue)' : 'var(--text-secondary)',
+                    fontWeight: isActive ? 600 : 500,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: isActive ? 'rgba(66, 133, 244, 0.08)' : 'transparent',
+                  })}
+                >
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: memberDomain.color,
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span>{memberDomain.name}</span>
+                </NavLink>
+              ) : null}
+            </div>
+          )}
+        </div>
 
         <NavLink
           to="/calendar"

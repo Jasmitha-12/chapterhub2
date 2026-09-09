@@ -7,11 +7,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper: Get the current user's profile document data
+    function getUserData() {
+      return get(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)).data;
+    }
+
     // Helper: Check if caller is an ADMIN using chapterhub_users/{uid}.role
     function isAdmin() {
       return isAuth() && 
         exists(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)).data.role == 'ADMIN';
+        getUserData().role == 'ADMIN';
     }
 
     // Helper: Verify that a user is only modifying their own safe profile fields
@@ -19,14 +24,24 @@ service cloud.firestore {
     function isSelfSafeProfileUpdate(uid) {
       return isAuth() &&
         request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'photoURL', 'updatedAt']);
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'photoURL', 'year', 'domain', 'domainId', 'updatedAt']);
     }
 
-    // Helper: Verify that a member is only updating status, updatedAt, and completedAt on their assigned task.
-    // completedAt is inherently part of status transition (set when marking COMPLETED, cleared otherwise)
+    // Helper: Check if a task belongs to the current member's domain
+    function isTaskInMemberDomain() {
+      return exists(/databases/$(database)/documents/chapterhub_users/$(request.auth.uid)) && (
+        resource.data.domain == getUserData().domain ||
+        (resource.data.domainId != null && getUserData().domainId != null && resource.data.domainId == getUserData().domainId)
+      );
+    }
+
+    // Helper: Verify that a member is only updating status, updatedAt, and completedAt on their assigned task,
+    // AND the task must belong to their own domain.
     function isMemberTaskStatusUpdate() {
       return isAuth() &&
         resource.data.assignedTo == request.auth.uid &&
+        isTaskInMemberDomain() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt']);
     }
 
@@ -35,8 +50,8 @@ service cloud.firestore {
     // ==========================================
     // 1. Any authenticated user can read profiles (needed for Members directory & task assignment)
     // 2. A user can create only their own document with role: 'MEMBER' (or an ADMIN can create for anyone)
-    // 3. A user can update only their own safe profile fields (name, email, photoURL, updatedAt)
-    // 4. Normal members can NEVER promote themselves to ADMIN
+    // 3. A user can update only their own safe profile fields (name, email, photoURL, year, domain, domainId, updatedAt)
+    // 4. Normal members can NEVER alter their own role
     // 5. Only an existing ADMIN can update other users, change roles, or delete users
     match /chapterhub_users/{uid} {
       allow read: if isAuth();
@@ -51,16 +66,25 @@ service cloud.firestore {
     // ==========================================
     // chapterhub_tasks: Tasks & Deliverables
     // ==========================================
-    // 6. Any authenticated user can read chapter tasks
-    // 7. Only ADMIN can create tasks
-    // 8. Only ADMIN can delete tasks
-    // 9. ADMIN can update any task
-    // 10. A MEMBER can update ONLY the status and updatedAt fields of a task assigned to them
+    // 6. Non-admin members can ONLY read tasks belonging to their domain
+    // 7. ADMIN can read all tasks
+    // 8. Only ADMIN can create tasks
+    // 9. Only ADMIN can delete tasks
+    // 10. ADMIN can update any task
+    // 11. A MEMBER can update ONLY status, updatedAt, completedAt of a task assigned to them in their domain
     match /chapterhub_tasks/{taskId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (isAdmin() || isTaskInMemberDomain());
       allow create: if isAdmin();
       allow update: if isAdmin() || isMemberTaskStatusUpdate();
       allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // chapterhub_events: Chapter Calendar Events
+    // ==========================================
+    match /chapterhub_events/{eventId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAdmin();
     }
   }
 }

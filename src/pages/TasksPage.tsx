@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { DOMAINS } from '../data/domains';
 import { TaskItem } from '../components/tasks/TaskItem';
 import { EmptyState } from '../components/common/EmptyState';
@@ -20,7 +21,16 @@ interface LayoutContext {
 
 export const TasksPage: React.FC = () => {
   const { openCreateTask } = useOutletContext<LayoutContext>();
-  const { tasks, isAdmin } = useData();
+  const { tasks, currentUser, isAdmin } = useData();
+  const { profile } = useAuth();
+
+  const memberDomain = DOMAINS.find(
+    (d) =>
+      d.id === currentUser?.domainId ||
+      d.name === currentUser?.domain ||
+      d.id === profile?.domainId ||
+      d.name === profile?.domain
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -38,8 +48,14 @@ export const TasksPage: React.FC = () => {
     if (selectedStatus !== 'ALL' && task.status !== selectedStatus) {
       return false;
     }
-    if (selectedDomain !== 'ALL' && task.domainId !== selectedDomain) {
-      return false;
+    if (isAdmin && selectedDomain !== 'ALL') {
+      const selectedDomainObj = DOMAINS.find((d) => d.id === selectedDomain);
+      const isDomainMatch =
+        task.domainId === selectedDomain ||
+        (selectedDomainObj && task.domain === selectedDomainObj.name);
+      if (!isDomainMatch) {
+        return false;
+      }
     }
     return true;
   });
@@ -103,18 +119,30 @@ export const TasksPage: React.FC = () => {
 
           {/* Domain Filter Dropdown */}
           <div className="filter-select-wrapper">
-            <select
-              className="filter-select"
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
-            >
-              <option value="ALL">All Domains ({DOMAINS.length})</option>
-              {DOMAINS.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
+            {isAdmin ? (
+              <select
+                className="filter-select"
+                value={selectedDomain}
+                onChange={(e) => setSelectedDomain(e.target.value)}
+              >
+                <option value="ALL">All Domains ({DOMAINS.length})</option>
+                {DOMAINS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                className="filter-select"
+                value={memberDomain ? memberDomain.id : 'ALL'}
+                disabled
+              >
+                <option value={memberDomain ? memberDomain.id : 'ALL'}>
+                  {memberDomain ? memberDomain.name : 'My Domain'}
                 </option>
-              ))}
-            </select>
+              </select>
+            )}
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useOutletContext } from 'react-router-dom';
-import { DOMAINS } from '../data/domains';
+import { useParams, useNavigate, useSearchParams, useOutletContext } from 'react-router-dom';
+import { DOMAINS, getDomainSlug, getDomainBySlugOrId } from '../data/domains';
+import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import type { Domain, DomainId } from '../types';
 import { TaskItem } from '../components/tasks/TaskItem';
@@ -27,30 +28,58 @@ interface LayoutContext {
 }
 
 export const DomainsPage: React.FC = () => {
+  const { domainSlug } = useParams<{ domainSlug?: string }>();
+  const navigate = useNavigate();
   const { openCreateTask, openAddMember } = useOutletContext<LayoutContext>();
-  const { tasks, members, isAdmin } = useData();
-  const [searchParams, setSearchParams] = useSearchParams();
-
+  const { tasks, members, currentUser, isAdmin } = useData();
+  const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const domainParamId = searchParams.get('id');
-  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
 
+  const memberDomain = DOMAINS.find(
+    (d) =>
+      d.id === currentUser?.domainId ||
+      d.name === currentUser?.domain ||
+      d.id === profile?.domainId ||
+      d.name === profile?.domain
+  );
+
+  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(() => {
+    if (!isAdmin && memberDomain) return memberDomain;
+    const target = domainSlug || domainParamId;
+    return target ? getDomainBySlugOrId(target) || null : null;
+  });
+
+  // Enforce member access boundary: MEMBER can ONLY access their own domain
   useEffect(() => {
-    if (domainParamId) {
-      const match = DOMAINS.find((d) => d.id === domainParamId);
-      if (match) setSelectedDomain(match);
+    if (!isAdmin) {
+      if (memberDomain) {
+        const allowedSlug = getDomainSlug(memberDomain);
+        if (domainSlug !== allowedSlug) {
+          navigate(`/domains/${allowedSlug}`, { replace: true });
+        }
+        setSelectedDomain(memberDomain);
+      }
     } else {
-      setSelectedDomain(null);
+      const target = domainSlug || domainParamId;
+      if (target) {
+        const match = getDomainBySlugOrId(target);
+        setSelectedDomain(match || null);
+      } else {
+        setSelectedDomain(null);
+      }
     }
-  }, [domainParamId]);
+  }, [isAdmin, memberDomain, domainSlug, domainParamId, navigate]);
 
   const handleSelectDomain = (domain: Domain) => {
-    setSelectedDomain(domain);
-    setSearchParams({ id: domain.id });
+    const slug = getDomainSlug(domain);
+    navigate(`/domains/${slug}`);
   };
 
   const handleClearSelection = () => {
-    setSelectedDomain(null);
-    setSearchParams({});
+    if (isAdmin) {
+      navigate('/domains');
+    }
   };
 
   const getDomainIcon = (iconName: string) => {
@@ -80,22 +109,24 @@ export const DomainsPage: React.FC = () => {
 
   // If a domain is selected, render the Domain Detail View
   if (selectedDomain) {
-    const domainTasks = tasks.filter((t) => t.domainId === selectedDomain.id);
-    const domainMembers = members.filter((m) => m.domainId === selectedDomain.id);
+    const domainTasks = tasks.filter((t) => t.domainId === selectedDomain.id || t.domain === selectedDomain.name);
+    const domainMembers = members.filter((m) => m.domainId === selectedDomain.id || m.domain === selectedDomain.name);
     const completedCount = domainTasks.filter((t) => t.status === 'COMPLETED').length;
 
     return (
       <div className="page-wrapper">
-        <div className="domain-detail-nav">
-          <button
-            type="button"
-            className="back-btn"
-            onClick={handleClearSelection}
-          >
-            <ArrowLeft size={16} />
-            <span>All Domains</span>
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="domain-detail-nav">
+            <button
+              type="button"
+              className="back-btn"
+              onClick={handleClearSelection}
+            >
+              <ArrowLeft size={16} />
+              <span>All Domains</span>
+            </button>
+          </div>
+        )}
 
         {/* Domain Detail Header */}
         <header className="domain-detail-hero">

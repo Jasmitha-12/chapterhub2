@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Task, Member, TaskStatus, DomainId, CalendarEvent, EventType } from '../types';
 import { useAuth } from './AuthContext';
 import { db } from '../services/firebase';
+import { DOMAINS } from '../data/domains';
 import {
   collection,
   doc,
@@ -11,6 +12,7 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
+  where,
 } from 'firebase/firestore';
 
 interface DataContextType {
@@ -30,6 +32,7 @@ interface DataContextType {
   deleteEvent: (eventId: string) => Promise<{ success: boolean; message?: string }>;
   updateMemberRole: (memberId: string, newRole: 'ADMIN' | 'MEMBER') => Promise<{ success: boolean; message?: string }>;
   updateMemberDomain: (memberId: string, domainId: DomainId) => Promise<{ success: boolean; message?: string }>;
+  updateMemberYear: (memberId: string, year: string) => Promise<{ success: boolean; message?: string }>;
   deleteMember: (memberId: string) => Promise<{ success: boolean; message?: string }>;
   canEditTaskStatus: (task: Task) => boolean;
   canEditTaskDetails: (task: Task) => boolean;
@@ -52,13 +55,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activeRole = (currentMember?.role || profile?.role || 'MEMBER').toUpperCase();
   const isAdmin = activeRole === 'ADMIN';
 
+  const userDomainName =
+    currentMember?.domain ||
+    profile?.domain ||
+    DOMAINS.find((d) => d.id === (currentMember?.domainId || profile?.domainId))?.name ||
+    'Tech Team';
+
+  const userDomainId: DomainId =
+    currentMember?.domainId ||
+    (profile?.domainId as DomainId) ||
+    (DOMAINS.find((d) => d.name === (currentMember?.domain || profile?.domain))?.id as DomainId) ||
+    'tech_team';
+
   // Construct current member object from real Firebase user and Firestore profile
   const currentUser: Member | null = user
     ? {
         id: user.uid,
         name: profile?.name || user.displayName || 'GRIET Member',
         email: user.email || '',
-        domainId: currentMember?.domainId || 'tech_team',
+        domainId: userDomainId,
+        domain: userDomainName,
+        year: currentMember?.year || profile?.year || undefined,
         role: activeRole,
         avatarColor: '#4285F4',
         photoURL: profile?.photoURL || user.photoURL,
@@ -77,7 +94,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setTasksLoading(true);
-    const tasksQuery = query(collection(db, 'chapterhub_tasks'));
+
+    let tasksQuery;
+    if (isAdmin) {
+      tasksQuery = query(collection(db, 'chapterhub_tasks'));
+    } else {
+      const memberDomain =
+        currentMember?.domain ||
+        profile?.domain ||
+        DOMAINS.find((d) => d.id === (currentMember?.domainId || profile?.domainId))?.name;
+
+      if (!memberDomain) {
+        // Member has not completed onboarding yet or domain not loaded
+        setTasks([]);
+        setTasksLoading(false);
+        return;
+      }
+
+      tasksQuery = query(
+        collection(db, 'chapterhub_tasks'),
+        where('domain', '==', memberDomain)
+      );
+    }
 
     const unsubscribeTasks = onSnapshot(
       tasksQuery,
@@ -92,11 +130,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return new Date().toISOString();
           };
 
+          const rawDomain = data.domain || data.domainId;
+          const matchedDomain = DOMAINS.find(
+            (d) =>
+              d.name.toLowerCase() === (rawDomain || '').toLowerCase() ||
+              d.id === (rawDomain || '').toLowerCase() ||
+              d.id === data.domainId ||
+              d.name === data.domain
+          );
+
           return {
             id: docSnap.id,
             title: data.title || 'Untitled Task',
             description: data.description || '',
-            domainId: (data.domainId as DomainId) || 'tech_team',
+            domainId: matchedDomain?.id || (data.domainId as DomainId) || 'tech_team',
+            domain: data.domain || matchedDomain?.name || 'Tech Team',
             subTrack: data.subTrack || undefined,
             assignedTo: data.assignedTo || undefined,
             priority: data.priority || 'MEDIUM',
@@ -128,7 +176,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     return () => unsubscribeTasks();
-  }, [user]);
+  }, [user, isAdmin, currentMember?.domain, profile?.domain, currentMember?.domainId, profile?.domainId]);
 
   // =========================================================================
   // 2. Real-time Members Listener: chapterhub_users
@@ -155,11 +203,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return new Date().toISOString();
           };
 
+          const rawDomain = data.domain || data.domainId;
+          const matchedDomain = DOMAINS.find(
+            (d) =>
+              d.name.toLowerCase() === (rawDomain || '').toLowerCase() ||
+              d.id === (rawDomain || '').toLowerCase() ||
+              d.id === data.domainId ||
+              d.name === data.domain
+          );
+
           return {
             id: docSnap.id,
             name: data.name || 'Club Member',
             email: data.email || '',
-            domainId: (data.domainId as DomainId) || 'tech_team',
+            domainId: matchedDomain?.id || (data.domainId as DomainId) || 'tech_team',
+            domain: data.domain || matchedDomain?.name || 'Tech Team',
+            year: data.year || undefined,
             role: data.role || 'MEMBER',
             photoURL: data.photoURL || null,
             avatarColor: googleColors[index % googleColors.length],
@@ -272,10 +331,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createTask = async (taskData: Omit<Task, 'id' | 'createdAt'>): Promise<string> => {
     if (!user) throw new Error('You must be logged in to create a task.');
 
+    const domainObj = DOMAINS.find(
+      (d) => d.id === taskData.domainId || d.name === taskData.domain || d.name === taskData.domainId
+    );
+    const domainName = domainObj?.name || taskData.domain || 'Tech Team';
+    const domainId = domainObj?.id || taskData.domainId || 'tech_team';
+
     const cleanData = {
       title: taskData.title.trim(),
       description: taskData.description.trim(),
-      domainId: taskData.domainId,
+      domain: domainName,
+      domainId: domainId,
       subTrack: taskData.subTrack || null,
       assignedTo: taskData.assignedTo || null,
       priority: taskData.priority,
@@ -345,7 +411,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       if (updates.title !== undefined) cleanUpdates.title = updates.title.trim();
       if (updates.description !== undefined) cleanUpdates.description = updates.description.trim();
-      if (updates.domainId !== undefined) cleanUpdates.domainId = updates.domainId;
+      if (updates.domainId !== undefined || updates.domain !== undefined) {
+        const rawDomain = updates.domainId || updates.domain;
+        const domainObj = DOMAINS.find(
+          (d) => d.id === rawDomain || d.name === rawDomain
+        );
+        cleanUpdates.domain = domainObj?.name || updates.domain || 'Tech Team';
+        cleanUpdates.domainId = domainObj?.id || updates.domainId || 'tech_team';
+      }
       if (updates.subTrack !== undefined) cleanUpdates.subTrack = updates.subTrack || null;
       if (updates.assignedTo !== undefined) cleanUpdates.assignedTo = updates.assignedTo || null;
       if (updates.priority !== undefined) cleanUpdates.priority = updates.priority;
@@ -501,17 +574,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return { success: false, message: 'You must be logged in.' };
     if (!isAdmin) return { success: false, message: 'Only an Admin can change member domains.' };
 
+    const domainName = DOMAINS.find((d) => d.id === domainId)?.name || 'Tech Team';
+
     try {
       const userRef = doc(db, 'chapterhub_users', memberId);
       await updateDoc(userRef, {
         domainId,
+        domain: domainName,
         updatedAt: serverTimestamp(),
       });
-      console.log(`[ChapterHub] Member ${memberId} domain updated to ${domainId}`);
+      console.log(`[ChapterHub] Member ${memberId} domain updated to ${domainName}`);
       return { success: true };
     } catch (err: any) {
       console.error('[ChapterHub] Failed to update member domain:', err);
       return { success: false, message: err.message || 'Failed to update member domain in Firestore.' };
+    }
+  };
+
+  const updateMemberYear = async (
+    memberId: string,
+    year: string
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!user) return { success: false, message: 'You must be logged in.' };
+    if (!isAdmin) return { success: false, message: 'Only an Admin can change member years.' };
+
+    try {
+      const userRef = doc(db, 'chapterhub_users', memberId);
+      await updateDoc(userRef, {
+        year,
+        updatedAt: serverTimestamp(),
+      });
+      console.log(`[ChapterHub] Member ${memberId} year updated to ${year}`);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[ChapterHub] Failed to update member year:', err);
+      return { success: false, message: err.message || 'Failed to update member year in Firestore.' };
     }
   };
 
@@ -554,6 +651,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteEvent,
         updateMemberRole,
         updateMemberDomain,
+        updateMemberYear,
         deleteMember,
         canEditTaskStatus,
         canEditTaskDetails,

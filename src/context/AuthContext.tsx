@@ -5,8 +5,16 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from '../services/firebase';
+import type { DomainId } from '../types';
 
 export interface UserProfile {
   uid: string;
@@ -14,6 +22,9 @@ export interface UserProfile {
   email: string | null;
   photoURL: string | null;
   role: string;
+  year?: string | null;
+  domain?: string | null;
+  domainId?: DomainId | null;
 }
 
 interface AuthContextType {
@@ -25,6 +36,12 @@ interface AuthContextType {
   logout: () => Promise<void>;
   clearAuthError: () => void;
   syncProfile: (firebaseUser: User) => Promise<UserProfile | null>;
+  updateProfileDoc: (updates: {
+    name?: string;
+    year?: string;
+    domain?: string;
+    domainId?: DomainId;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,6 +92,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: newProfileData.email,
           photoURL: newProfileData.photoURL,
           role: newProfileData.role,
+          year: null,
+          domain: null,
+          domainId: null,
         };
 
         setProfile(createdProfile);
@@ -90,6 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email ?? firebaseUser.email ?? '',
           photoURL: data.photoURL ?? firebaseUser.photoURL ?? null,
           role: data.role ?? 'MEMBER',
+          year: data.year ?? null,
+          domain: data.domain ?? null,
+          domainId: data.domainId ?? null,
         };
 
         setProfile(loadedProfile);
@@ -117,6 +140,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: firebaseUser.email || '',
         photoURL: firebaseUser.photoURL || null,
         role: 'MEMBER',
+        year: null,
+        domain: null,
+        domainId: null,
       };
       setProfile(fallbackProfile);
 
@@ -124,6 +150,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       syncingUidRef.current = null;
     }
+  };
+
+  // Real-time listener for current user's profile document changes (e.g. Admin changes domain or role)
+  useEffect(() => {
+    if (!user) return;
+
+    const userRef = doc(db, 'chapterhub_users', user.uid);
+    const unsubscribeProfile = onSnapshot(
+      userRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setProfile({
+            uid: user.uid,
+            name: data.name ?? user.displayName ?? 'GRIET Member',
+            email: data.email ?? user.email ?? '',
+            photoURL: data.photoURL ?? user.photoURL ?? null,
+            role: data.role ?? 'MEMBER',
+            year: data.year ?? null,
+            domain: data.domain ?? null,
+            domainId: data.domainId ?? null,
+          });
+        }
+      },
+      (err) => {
+        console.warn('[ChapterHub Auth] Realtime profile listener error:', err);
+      }
+    );
+
+    return () => unsubscribeProfile();
+  }, [user]);
+
+  const updateProfileDoc = async (updates: {
+    name?: string;
+    year?: string;
+    domain?: string;
+    domainId?: DomainId;
+  }) => {
+    if (!user) throw new Error('User not authenticated.');
+    const userRef = doc(db, 'chapterhub_users', user.uid);
+    const cleanUpdates: Record<string, any> = {
+      updatedAt: serverTimestamp(),
+    };
+    if (updates.name !== undefined) cleanUpdates.name = updates.name.trim();
+    if (updates.year !== undefined) cleanUpdates.year = updates.year;
+    if (updates.domain !== undefined) cleanUpdates.domain = updates.domain;
+    if (updates.domainId !== undefined) cleanUpdates.domainId = updates.domainId;
+
+    await updateDoc(userRef, cleanUpdates);
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            ...(updates.name ? { name: updates.name.trim() } : {}),
+            ...(updates.year ? { year: updates.year } : {}),
+            ...(updates.domain ? { domain: updates.domain } : {}),
+            ...(updates.domainId ? { domainId: updates.domainId } : {}),
+          }
+        : null
+    );
   };
 
   useEffect(() => {
@@ -232,6 +318,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         clearAuthError,
         syncProfile,
+        updateProfileDoc,
       }}
     >
       {children}

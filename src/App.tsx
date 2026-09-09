@@ -26,6 +26,7 @@ export const App: React.FC = () => {
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="tasks" element={<TasksPage />} />
                   <Route path="domains" element={<DomainsPage />} />
+                  <Route path="domains/:domainSlug" element={<DomainsPage />} />
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="members" element={<MembersPage />} />
                 </Route>

@@ -71,3 +71,26 @@ export const DOMAINS: Domain[] = [
 export const getDomainById = (id: string): Domain | undefined => {
   return DOMAINS.find((d) => d.id === id);
 };
+
+export const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'] as const;
+export type CollegeYear = typeof YEAR_OPTIONS[number];
+
+export const getDomainSlug = (domain: Domain | string): string => {
+  const d =
+    typeof domain === 'string'
+      ? getDomainById(domain) ||
+        DOMAINS.find((x) => x.name.toLowerCase() === domain.toLowerCase())
+      : domain;
+  if (!d) return 'tech-team';
+  return d.id.replace(/_/g, '-');
+};
+
+export const getDomainBySlugOrId = (slugOrId: string): Domain | undefined => {
+  const normalized = slugOrId.toLowerCase().replace(/-/g, '_');
+  return DOMAINS.find(
+    (d) =>
+      d.id === normalized ||
+      d.id === slugOrId ||
+      d.name.toLowerCase() === slugOrId.toLowerCase().replace(/-/g, ' ')
+  );
+};

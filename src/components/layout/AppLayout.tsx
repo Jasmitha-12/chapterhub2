@@ -6,11 +6,12 @@ import { AtmosphericCanvas } from '../background/AtmosphericCanvas';
 import { useAuth } from '../../context/AuthContext';
 import { CreateTaskModal } from '../tasks/CreateTaskModal';
 import { AddMemberModal } from '../members/AddMemberModal';
+import { OnboardingScreen } from '../auth/OnboardingScreen';
 import type { DomainId } from '../../types';
 import { Loader2 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const location = useLocation();
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -46,6 +47,18 @@ export const AppLayout: React.FC = () => {
   // If unauthenticated, redirect to /login
   if (!user && location.pathname !== '/login') {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check if authenticated non-admin member needs onboarding
+  const isUserAdmin = profile?.role === 'ADMIN';
+  const needsOnboarding = Boolean(
+    user &&
+      !isUserAdmin &&
+      (!profile?.year || !(profile?.domain || profile?.domainId) || !profile?.name?.trim())
+  );
+
+  if (needsOnboarding) {
+    return <OnboardingScreen />;
   }
 
   return (

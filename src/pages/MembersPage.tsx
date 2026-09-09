@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { DOMAINS, getDomainById } from '../data/domains';
+import { DOMAINS, getDomainById, YEAR_OPTIONS } from '../data/domains';
 import { EmptyState } from '../components/common/EmptyState';
 import { Modal } from '../components/common/Modal';
 import type { Member, DomainId } from '../types';
@@ -32,6 +32,7 @@ export const MembersPage: React.FC = () => {
     isAdmin,
     updateMemberRole,
     updateMemberDomain,
+    updateMemberYear,
     deleteMember,
   } = useData();
 
@@ -113,6 +114,14 @@ export const MembersPage: React.FC = () => {
       await updateMemberDomain(memberId, domainId);
     } catch (err) {
       console.error('Failed to change domain:', err);
+    }
+  };
+
+  const handleYearChange = async (memberId: string, year: string) => {
+    try {
+      await updateMemberYear(memberId, year);
+    } catch (err) {
+      console.error('Failed to change year:', err);
     }
   };
 
@@ -280,7 +289,7 @@ export const MembersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="member-domain-row">
+                  <div className="member-domain-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {isAdmin ? (
                       <select
                         className="member-domain-select"
@@ -289,6 +298,7 @@ export const MembersPage: React.FC = () => {
                           handleDomainChange(member.id, e.target.value as DomainId)
                         }
                         title="Change domain assignment"
+                        style={{ flex: 1 }}
                       >
                         {DOMAINS.map((d) => (
                           <option key={d.id} value={d.id}>
@@ -305,6 +315,45 @@ export const MembersPage: React.FC = () => {
                         }}
                       >
                         {domain?.name || member.domainId}
+                      </span>
+                    )}
+
+                    {isAdmin ? (
+                      <select
+                        className="member-year-select"
+                        value={member.year || '1st Year'}
+                        onChange={(e) => handleYearChange(member.id, e.target.value)}
+                        title="Change academic year"
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: '0.8rem',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: 'var(--surface)',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {YEAR_OPTIONS.map((yr) => (
+                          <option key={yr} value={yr}>
+                            {yr}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        className="year-pill"
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          borderRadius: '12px',
+                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: 'var(--surface-hover)',
+                          color: 'var(--text-secondary)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {member.year || '1st Year'}
                       </span>
                     )}
                   </div>

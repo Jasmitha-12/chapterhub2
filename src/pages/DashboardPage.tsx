@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { DOMAINS } from '../data/domains';
+import { useAuth } from '../context/AuthContext';
+import { DOMAINS, getDomainSlug } from '../data/domains';
 import { TaskItem } from '../components/tasks/TaskItem';
 import { EmptyState } from '../components/common/EmptyState';
 import {
@@ -18,7 +19,22 @@ interface LayoutContext {
 export const DashboardPage: React.FC = () => {
   const { openCreateTask, openAddMember } = useOutletContext<LayoutContext>();
   const { tasks, currentUser, isAdmin } = useData();
+  const { profile } = useAuth();
   const navigate = useNavigate();
+
+  const memberDomain = DOMAINS.find(
+    (d) =>
+      d.id === currentUser?.domainId ||
+      d.name === currentUser?.domain ||
+      d.id === profile?.domainId ||
+      d.name === profile?.domain
+  );
+
+  const displayedDomains = isAdmin
+    ? DOMAINS
+    : memberDomain
+    ? [memberDomain]
+    : [];
 
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
 
@@ -198,26 +214,36 @@ export const DashboardPage: React.FC = () => {
         {/* Quick Domain Sidebar Overview */}
         <div className="domains-sidebar-panel">
           <div className="section-header-bar">
-            <h2 className="section-title">Domains ({DOMAINS.length})</h2>
+            <h2 className="section-title">
+              {isAdmin ? `Domains (${DOMAINS.length})` : 'My Domain'}
+            </h2>
             <button
               type="button"
               className="view-all-link"
-              onClick={() => navigate('/domains')}
+              onClick={() => {
+                if (isAdmin) {
+                  navigate('/domains');
+                } else if (memberDomain) {
+                  navigate(`/domains/${getDomainSlug(memberDomain)}`);
+                }
+              }}
             >
-              <span>Explore</span>
+              <span>{isAdmin ? 'Explore' : 'Workspace'}</span>
               <ArrowRight size={14} />
             </button>
           </div>
 
           <div className="surface-card domains-quick-card">
             <div className="domain-pill-list">
-              {DOMAINS.map((domain) => {
-                const domainTasks = tasks.filter((t) => t.domainId === domain.id);
+              {displayedDomains.map((domain) => {
+                const domainTasks = tasks.filter(
+                  (t) => t.domainId === domain.id || t.domain === domain.name
+                );
                 return (
                   <div
                     key={domain.id}
                     className="domain-quick-item"
-                    onClick={() => navigate(`/domains?id=${domain.id}`)}
+                    onClick={() => navigate(`/domains/${getDomainSlug(domain)}`)}
                     role="button"
                     tabIndex={0}
                   >
